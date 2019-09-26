@@ -11,9 +11,9 @@ namespace Raven
 
         public Command(string name, string usage, string description)
         {
-            Name = name;
-            Usage = usage;
-            Description = description;
+            Name = !String.IsNullOrWhiteSpace(name) ? name : throw new ArgumentException("Parameter name is null or empty");
+            Usage = usage ?? throw new ArgumentException("Parameter usage is null");
+            Description = description ?? throw new ArgumentException("Parameter description is null");
         }
     }
 }
