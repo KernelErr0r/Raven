@@ -3,11 +3,11 @@ using System;
 namespace Raven
 {
     [AttributeUsage(AttributeTargets.Parameter)]
-    public class DefaultValue : Attribute
+    public sealed class DefaultValueAttribute : Attribute
     {
         public object Value { get; }
 
-        public DefaultValue(object value)
+        public DefaultValueAttribute(object value)
         {
             Value = value;
         }

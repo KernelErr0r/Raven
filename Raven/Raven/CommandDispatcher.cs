@@ -13,7 +13,7 @@ namespace Raven
         {
             var type = parser.GetType();
 
-            if (type.GetCustomAttributes(typeof(TypeParser)) is TypeParser[] attributes && type.GetMethod("CanParse") != null)
+            if (type.GetCustomAttributes(typeof(TypeParserAttribute)) is TypeParserAttribute[] attributes && type.GetMethod("CanParse") != null)
             {
                 foreach (var attribute in attributes)
                 {
@@ -30,7 +30,7 @@ namespace Raven
         {
             var type = parser.GetType();
 
-            if (type.GetCustomAttributes(typeof(TypeParser)) is TypeParser[] attributes && type.GetMethod("CanParse") != null)
+            if (type.GetCustomAttributes(typeof(TypeParserAttribute)) is TypeParserAttribute[] attributes && type.GetMethod("CanParse") != null)
             {
                 for (int i = 0; i < parsers.Count; i++)
                 {
@@ -151,14 +151,14 @@ namespace Raven
                 result.Add(Type.Missing);   
             }
         }
-
+        
         private struct TypeParserPlaceholder
         {
-            public TypeParser Attribute { get; }
+            public TypeParserAttribute Attribute { get; }
             public Type Type { get; }
             public object Instance { get; }
 
-            public TypeParserPlaceholder(TypeParser attribute, Type type, object instance)
+            public TypeParserPlaceholder(TypeParserAttribute attribute, Type type, object instance)
             {
                 Attribute = attribute;
                 Type = type;

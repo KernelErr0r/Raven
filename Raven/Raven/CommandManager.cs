@@ -21,7 +21,7 @@ namespace Raven
         {
             var type = command.GetType();
 
-            if (type.GetCustomAttribute(typeof(Command)) is Command attribute)
+            if (type.GetCustomAttribute(typeof(CommandAttribute)) is CommandAttribute attribute)
             {
                 commands.Add(new CommandPlaceholder(attribute, command));
             }
@@ -35,7 +35,7 @@ namespace Raven
         {
             var type = command.GetType();
 
-            if (type.GetCustomAttribute(typeof(Command)) is Command attribute)
+            if (type.GetCustomAttribute(typeof(CommandAttribute)) is CommandAttribute attribute)
             {
                 for (int i = 0; i < commands.Count; i++)
                 {
@@ -74,10 +74,10 @@ namespace Raven
 
         private struct CommandPlaceholder
         {
-            public Command Attribute { get; }
+            public CommandAttribute Attribute { get; }
             public object Instance { get; }
 
-            public CommandPlaceholder(Command attribute, object instance)
+            public CommandPlaceholder(CommandAttribute attribute, object instance)
             {
                 Attribute = attribute;
                 Instance = instance;
