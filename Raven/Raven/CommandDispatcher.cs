@@ -7,13 +7,13 @@ namespace Raven
 {
     public class CommandDispatcher : ICommandDispatcher
     {
-        private IArgumentParser argumentParser = new ArgumentParser();
+        public readonly IArgumentParser ArgumentParser = new ArgumentParser();
         
         public CommandDispatcher() { }
 
         public CommandDispatcher(IArgumentParser argumentParser)
         {
-            this.argumentParser = argumentParser;
+            ArgumentParser = argumentParser;
         }
 
         public List<object> Dispatch(MethodInfo methodInfo, params string[] arguments)
@@ -69,7 +69,7 @@ namespace Raven
         {
             var candidates = new List<TypeParserPlaceholder>();
             
-            foreach (var parser in argumentParser.Parsers)
+            foreach (var parser in ArgumentParser.Parsers)
             {
                 var status = parser.Type.GetMethod("CanParse")
                     .Invoke(parser.Instance, new[] {parameter.ParameterType}) as bool?;
