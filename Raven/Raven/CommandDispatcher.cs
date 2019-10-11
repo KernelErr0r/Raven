@@ -7,48 +7,13 @@ namespace Raven
 {
     public class CommandDispatcher : ICommandDispatcher
     {
-        private List<TypeParserPlaceholder> parsers = new List<TypeParserPlaceholder>();
+        private IArgumentParser argumentParser = new ArgumentParser();
+        
+        public CommandDispatcher() { }
 
-        public void RegisterTypeParser(object parser)
+        public CommandDispatcher(IArgumentParser argumentParser)
         {
-            var type = parser.GetType();
-
-            if (type.GetCustomAttributes(typeof(TypeParserAttribute)) is TypeParserAttribute[] attributes && type.GetMethod("CanParse") != null)
-            {
-                foreach (var attribute in attributes)
-                {
-                    parsers.Add(new TypeParserPlaceholder(attribute, type, parser));
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Invalid parser");
-            }
-        }
-
-        public void UnregisterTypeParser(object parser)
-        {
-            var type = parser.GetType();
-
-            if (type.GetCustomAttributes(typeof(TypeParserAttribute)) is TypeParserAttribute[] attributes && type.GetMethod("CanParse") != null)
-            {
-                for (int i = 0; i < parsers.Count; i++)
-                {
-                    foreach (var attribute in attributes)
-                    {
-                        if (parsers[i].Attribute.Equals(attribute))
-                        {
-                            parsers.RemoveAt(i);
-                            
-                            return;
-                        }   
-                    }
-                }
-            }
-            else
-            {
-                throw new ArgumentException("Invalid parser");
-            }
+            this.argumentParser = argumentParser;
         }
 
         public List<object> Dispatch(MethodInfo methodInfo, params string[] arguments)
@@ -104,7 +69,7 @@ namespace Raven
         {
             var candidates = new List<TypeParserPlaceholder>();
             
-            foreach (var parser in parsers)
+            foreach (var parser in argumentParser.Parsers)
             {
                 var status = parser.Type.GetMethod("CanParse")
                     .Invoke(parser.Instance, new[] {parameter.ParameterType}) as bool?;
