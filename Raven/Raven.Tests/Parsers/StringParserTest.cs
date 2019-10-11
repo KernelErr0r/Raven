@@ -14,7 +14,7 @@ namespace Raven.Tests.Parsers
         {
             method1 = GetType().GetMethod("Method1", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            dispatcher.RegisterTypeParser(new StringParser());
+            dispatcher.ArgumentParser.RegisterTypeParser(new StringParser());
         }
     
         [Fact]
