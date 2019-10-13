@@ -19,5 +19,5 @@ jobs:
         dotnet-version: ${{ matrix.dotnet }}
     - name: Restore and build
       run: |
-        dotnet restore
-        dotnet build --configuration Release
+        dotnet restore Raven/Raven.sln
+        dotnet build Raven/Raven.sln --configuration Release
