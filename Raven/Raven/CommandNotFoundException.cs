@@ -2,11 +2,11 @@ using System;
 
 namespace Raven
 {
-    public class CommandNotFound : Exception
+    public class CommandNotFoundException : Exception
     {
         public readonly string CommandName;
     
-        public CommandNotFound(string commandName)
+        public CommandNotFoundException(string commandName)
         {
             CommandName = commandName;
         }
