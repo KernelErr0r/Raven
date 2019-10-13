@@ -1,10 +1,12 @@
-using System.Collections.Generic;
+using System;
 using System.Reflection;
 
 namespace Raven
 {
     public interface ICommandDispatcher
     {
-        List<object> Dispatch(MethodInfo methodInfo, params string[] arguments);
+        IArgumentParser ArgumentParser { get; }
+
+        MethodInfo Dispatch(object command, string subcommand, params string[] arguments);
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace Raven
@@ -27,7 +28,7 @@ namespace Raven
             }
             else
             {
-                throw new ArgumentException("Invalid command");
+                throw new InvalidCommandException();
             }
         }
 
@@ -49,7 +50,7 @@ namespace Raven
             }
             else
             {
-                throw new ArgumentException("Invalid command");
+                throw new InvalidCommandException();
             }
         }
 
@@ -60,16 +61,45 @@ namespace Raven
                 if (String.Equals(placeholder.Attribute.Name, commandName, StringComparison.CurrentCultureIgnoreCase))
                 {
                     var type = placeholder.Instance.GetType();
-                    var invokeMethod = type.GetMethod("Invoke");
-                    var parsedArgs = Dispatcher.Dispatch(invokeMethod, arguments);
+                    MethodInfo handler;
+
+                    if (arguments.Length > 0 && GetSubcommand(type, arguments[0]) != null)
+                    {
+                        var subcommandName = arguments[0];
+
+                        arguments = arguments.Skip(1).ToArray();
+                        handler = Dispatcher.Dispatch(placeholder.Instance, subcommandName, arguments);
+                    }
+                    else
+                    {
+                        handler = Dispatcher.Dispatch(placeholder.Instance, "", arguments);
+                    }
+
+                    var parsedArgs = Dispatcher.ArgumentParser.ParseArguments(handler.GetParameters(), arguments);
                         
-                    invokeMethod.Invoke(placeholder.Instance, parsedArgs.ToArray());
+                    handler.Invoke(placeholder.Instance, parsedArgs.ToArray());
 
                     return;
                 }
             }
             
-            throw new ArgumentException($"Command {commandName} doesn't exist");
+            throw new CommandNotFoundException(commandName);
+        }
+
+        private MethodInfo GetSubcommand(Type type, string name)
+        {
+            foreach (var method in type.GetMethods())
+            {
+                if (method.GetCustomAttribute<SubcommandAttribute>() is { } attribute)
+                {
+                    if (String.Equals(attribute.Name, name, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return method;
+                    }
+                }
+            }
+        
+            return null;
         }
 
         private struct CommandPlaceholder

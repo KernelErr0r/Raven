@@ -7,7 +7,9 @@ namespace Raven
 {
     public class CommandDispatcher : ICommandDispatcher
     {
-        public readonly IArgumentParser ArgumentParser = new ArgumentParser();
+        public IArgumentParser ArgumentParser { get; } = new ArgumentParser();
+
+        private BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         
         public CommandDispatcher() { }
 
@@ -16,105 +18,94 @@ namespace Raven
             ArgumentParser = argumentParser;
         }
 
-        public List<object> Dispatch(MethodInfo methodInfo, params string[] arguments)
+        public MethodInfo Dispatch(object command, string subcommand, params string[] arguments)
         {
-            var result = new List<object>();
-            var parameters = methodInfo.GetParameters();
-            var candidates = new Dictionary<ParameterInfo, List<TypeParserPlaceholder>>();
-            var argumentIndex = 0;
-            var optionalParameters = CountOfOptionalParameters(parameters);
+            var commandType = command.GetType();
 
-            arguments = arguments ?? new string[0];
+            if (commandType.GetCustomAttribute<CommandAttribute>() is { })
+            {
+                var handlers = GetHandlers(commandType, subcommand);
+
+                foreach (var handler in handlers)
+                {
+                    if (IsCorrectHandler(handler, arguments))
+                    {
+                        return handler;
+                    }
+                }
+
+                throw new HandlerNotFoundException();
+            }
+            else
+            {
+                throw new InvalidCommandException();
+            }
+        }
+
+        private List<MethodInfo> GetHandlers(Type type, string subcommand)
+        {
+            var handlers = new List<MethodInfo>();
+
+            foreach (var method in type.GetMethods(flags))
+            {
+                if (string.IsNullOrWhiteSpace(subcommand) && method.GetCustomAttribute<DefaultAttribute>() is { })
+                {
+                    handlers.Add(method);
+                }
+                else if (!string.IsNullOrWhiteSpace(subcommand) && method.GetCustomAttribute<SubcommandAttribute>() is { } subcommandAttribute)
+                {
+                    if (string.Equals(subcommandAttribute.Name, subcommand, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        handlers.Add(method);
+                    }
+                }
+            }
+
+            return handlers;
+        }
+
+        private bool IsCorrectHandler(MethodInfo handler, params string[] arguments)
+        {
+            var parameters = handler.GetParameters();
+            var candidates = new Dictionary<ParameterInfo, List<TypeParserPlaceholder>>();
+            var optionalParameters = ArgumentParser.CountOfOptionalParameters(parameters);
+            var argumentIndex = 0;
+                
+            arguments ??= new string[0];
 
             if (arguments.Length >= parameters.Length - optionalParameters)
             {
                 foreach (var parameter in parameters)
                 {
-                    candidates.Add(parameter, GetCandidates(parameter));
+                    candidates.Add(parameter, ArgumentParser.GetCandidates(parameter));
                     candidates[parameter] = candidates[parameter].OrderBy(x => x.Attribute.Priority).ToList();
 
-                    if (!parameter.ParameterType.IsArray)
+                    if (argumentIndex < arguments.Length && candidates[parameter].Any(n => n.Attribute.Type == parameter.ParameterType))
                     {
-                        result.Add(ParseType(candidates[parameter], parameter, arguments, ref argumentIndex));
+                        if (!parameter.ParameterType.IsArray)
+                        {
+                            var result = ArgumentParser.ParseType(candidates[parameter], parameter, arguments, ref argumentIndex);
+
+                            if (result == null && parameter.GetCustomAttribute<DefaultValueAttribute>() is null)
+                                return false;
+                        }
+                        else
+                        {
+                            //TODO
+                        }
                     }
-                    else
+                    else if (parameter.GetCustomAttribute<DefaultValueAttribute>() is null)
                     {
-                        //TODO
-                        //result.Add(ParseTypeArray());
+                        return false;
                     }
                 }
-
-                FillOptionalParameters(ref result, parameters);
             }
             else
             {
                 throw new ArgumentException();
             }
 
-            return result;
-        }
-
-        private int CountOfOptionalParameters(ParameterInfo[] parameters)
-        {
-            var optionalParameters = 0;
-            
-            foreach (var parameter in parameters)
-                if (parameter.IsOptional)
-                    optionalParameters++;
-            
-            return optionalParameters;
-        }
-
-        private List<TypeParserPlaceholder> GetCandidates(ParameterInfo parameter)
-        {
-            var candidates = new List<TypeParserPlaceholder>();
-            
-            foreach (var parser in ArgumentParser.Parsers)
-            {
-                var status = parser.Type.GetMethod("CanParse")
-                    .Invoke(parser.Instance, new[] {parameter.ParameterType}) as bool?;
-
-                if (status ?? false)
-                {
-                    candidates.Add(parser);
-                }
-            }
-            
-            return candidates;
-        }
-
-        private object ParseType(List<TypeParserPlaceholder> placeholders, ParameterInfo parameterInfo, string[] arguments, ref int argumentIndex)
-        {
-            foreach (var type in placeholders)
-            {
-                if (parameterInfo.ParameterType == type.Attribute.Type && argumentIndex < arguments.Length)
-                {
-                    object result = null;
-                    
-                    foreach (var method in type.Type.GetMethods())
-                    {
-                        if (method.ReturnType == parameterInfo.ParameterType)
-                        {
-                            result = method.Invoke(type.Instance,
-                                new object[] { arguments[argumentIndex++] });
-
-                            break;
-                        }
-                    }
-
-                    return result ?? Type.Missing;
-                }
-            }
-
-            return Type.Missing;
-        }
-
-        private void FillOptionalParameters(ref List<object> result, ParameterInfo[] parameters)
-        {
-            for (int i = 0; i < Math.Max(parameters.Length - result.Count, 0); i++)
-            {
-                result.Add(Type.Missing);   
-            }
+            return true;
         }
     }
 }
